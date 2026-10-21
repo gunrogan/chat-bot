@@ -1,0 +1,156 @@
+<script>
+  // ------------------------------------------------------------------
+  // Общий клиент чата. Параметры берутся из data-атрибутов <body>:
+  //   data-api-url     — конечная точка API (по умолчанию /api/chat/send/)
+  //   data-mascot      — эмодзи-маскот бота
+  //   data-xp-name     — название очков (например «очков магии»)
+  //   data-level-name  — название уровня (например «Ранг»)
+  //   data-user-bubble — CSS-классы пузыря пользователя
+  //   data-bot-bubble  — CSS-классы пузыря бота
+  //   data-typing      — CSS-классы блока «бот печатает»
+  //   data-confetti    — цвета конфетти через запятую
+  // ------------------------------------------------------------------
+  (function () {
+    const body = document.body;
+    const API_URL = body.dataset.apiUrl || '/api/chat/send/';
+    const MASCOT = body.dataset.mascot || '🤖';
+    const XP_NAME = body.dataset.xpName || 'очков опыта';
+    const LEVEL_NAME = body.dataset.levelName || 'Уровень';
+    const USER_BUBBLE = body.dataset.userBubble
+      || 'max-w-[75%] rounded-3xl rounded-br-md bg-gradient-to-br from-fuchsia-500 to-violet-600 px-4 py-3 text-[15px] leading-snug text-white shadow-lg';
+    const BOT_BUBBLE = body.dataset.botBubble
+      || 'max-w-[75%] rounded-3xl rounded-bl-md border-2 border-amber-300 bg-white px-4 py-3 text-[15px] leading-snug text-slate-700 shadow-lg';
+    const TYPING_CLS = body.dataset.typing
+      || 'border-2 border-amber-300 bg-white text-slate-700 shadow-lg';
+    const CONFETTI = (body.dataset.confetti
+      || '#f43f5e,#f97316,#facc15,#4ade80,#38bdf8,#a78bfa,#f472b6').split(',');
+
+    const messages = document.getElementById('messages');
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const xpBar = document.getElementById('xp-bar');
+    const xpLabel = document.getElementById('xp-label');
+
+    let waiting = false;
+    let xp = 0;
+
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(^|;\\s*)' + name + '=([^;]*)'));
+      return match ? decodeURIComponent(match[2]) : null;
+    }
+
+    function scrollDown() { messages.scrollTop = messages.scrollHeight; }
+
+    function addMessage(text, who) {
+      const wrap = document.createElement('div');
+      wrap.className = 'animate-pop flex items-end gap-2 ' + (who === 'user' ? 'justify-end' : 'justify-start');
+
+      if (who === 'bot') {
+        const avatar = document.createElement('div');
+        avatar.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-cyan-400 to-blue-500 text-xl shadow-md';
+        avatar.textContent = MASCOT;
+        wrap.appendChild(avatar);
+      }
+
+      const bubble = document.createElement('div');
+      bubble.className = who === 'user' ? USER_BUBBLE : BOT_BUBBLE;
+      bubble.textContent = text;
+      wrap.appendChild(bubble);
+
+      messages.appendChild(wrap);
+      scrollDown();
+    }
+
+    function showTyping() {
+      const wrap = document.createElement('div');
+      wrap.id = 'typing-wrap';
+      wrap.className = 'flex items-end gap-2';
+      wrap.innerHTML =
+        '<div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-cyan-400 to-blue-500 text-xl shadow-md">' + MASCOT + '</div>' +
+        '<div class="flex items-center gap-1.5 rounded-3xl rounded-bl-md px-5 py-4 ' + TYPING_CLS + '">' +
+          '<span class="dot bg-cyan-400"></span>' +
+          '<span class="dot dot-delay-1 bg-fuchsia-400"></span>' +
+          '<span class="dot dot-delay-2 bg-amber-400"></span>' +
+        '</div>';
+      messages.appendChild(wrap);
+      scrollDown();
+    }
+
+    function hideTyping() {
+      const wrap = document.getElementById('typing-wrap');
+      if (wrap) wrap.remove();
+    }
+
+    async function sendMessage(text) {
+      waiting = true;
+      sendBtn.disabled = true;
+      sendBtn.classList.add('opacity-60', 'cursor-not-allowed');
+      showTyping();
+
+      try {
+        const res = await fetch(API_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+          },
+          body: JSON.stringify({ message: text }),
+        });
+        const data = await res.json();
+        hideTyping();
+
+        if (res.ok && data.reply) {
+          addMessage(data.reply, 'bot');
+          gainXp();
+          spawnConfetti();
+        } else {
+          addMessage('Что-то пошло не так 😅 Попробуй ещё раз!', 'bot');
+        }
+      } catch (err) {
+        hideTyping();
+        addMessage('Связь с ботом потеряна 📡 Попробуй ещё раз!', 'bot');
+      } finally {
+        waiting = false;
+        sendBtn.disabled = false;
+        sendBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+        input.focus();
+      }
+    }
+
+    function gainXp() {
+      xp += 25;
+      const level = Math.floor(xp / 100) + 1;
+      xpLabel.textContent = LEVEL_NAME + ' ' + level + ' · ' + xp + ' ' + XP_NAME;
+      xpBar.style.width = (xp % 100) + '%';
+    }
+
+    function spawnConfetti() {
+      for (let i = 0; i < 22; i++) {
+        const piece = document.createElement('div');
+        const size = 6 + Math.random() * 8;
+        piece.style.cssText = 'position:fixed;top:-14px;left:' + (Math.random() * 100) + 'vw;width:' + size + 'px;height:' + (size * 0.6) + 'px;background:' + CONFETTI[i % CONFETTI.length] + ';border-radius:3px;z-index:9999;animation:confetti-fall ' + (1 + Math.random() * 1.4) + 's linear forwards;animation-delay:' + (Math.random() * 0.3) + 's;';
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 3000);
+      }
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text || waiting) return;
+      addMessage(text, 'user');
+      input.value = '';
+      sendMessage(text);
+    });
+
+    document.querySelectorAll('.quick-chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (waiting) return;
+        const text = btn.dataset.message;
+        addMessage(text, 'user');
+        sendMessage(text);
+      });
+    });
+  })();
+</script>

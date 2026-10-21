@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Игровой учебный чат-бот для школьников">
+  <title>🚀 Робот-Учёный — учимся играя!</title>
+
+  {# Tailwind CSS через Play CDN (удобно для шаблона/демо). #}
+  {# Для продакшена рекомендую собрать Tailwind локально и подключить готовый css. #}
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            game: ['"Baloo 2"', '"Nunito"', 'system-ui', 'sans-serif'],
+          },
+        },
+      },
+    };
+  </script>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;600;700;800&family=Nunito:wght@400;700;800&display=swap" rel="stylesheet">
+
+  <style>
+    /* ---------- Игровые анимации ---------- */
+    @keyframes floaty {
+      0%, 100% { transform: translateY(0) rotate(-4deg); }
+      50%      { transform: translateY(-18px) rotate(5deg); }
+    }
+    @keyframes pop-in {
+      from { transform: scale(.6) translateY(8px); opacity: 0; }
+      to   { transform: scale(1) translateY(0);    opacity: 1; }
+    }
+    @keyframes bounce-dot {
+      0%, 80%, 100% { transform: translateY(0); }
+      40%           { transform: translateY(-8px); }
+    }
+    @keyframes confetti-fall {
+      0%   { transform: translateY(-24px) rotate(0deg);   opacity: 1; }
+      100% { transform: translateY(72vh)  rotate(720deg); opacity: 0; }
+    }
+    @keyframes wiggle {
+      0%, 100% { transform: rotate(-6deg); }
+      50%      { transform: rotate(6deg); }
+    }
+
+    .floaty       { position: absolute; opacity: .85; user-select: none; pointer-events: none; animation: floaty 6s ease-in-out infinite; }
+    .animate-pop  { animation: pop-in .35s cubic-bezier(.34, 1.56, .64, 1) both; }
+    .robot-wiggle { animation: wiggle 3s ease-in-out infinite; }
+
+    .dot          { width: 10px; height: 10px; border-radius: 9999px; background: #38bdf8; animation: bounce-dot 1s infinite ease-in-out; }
+    .dot-delay-1  { animation-delay: .15s; }
+    .dot-delay-2  { animation-delay: .3s; }
+
+    #messages::-webkit-scrollbar { width: 8px; }
+    #messages::-webkit-scrollbar-thumb { background: #fbbf24; border-radius: 9999px; }
+    #messages::-webkit-scrollbar-track { background: transparent; }
+
+    @media (prefers-reduced-motion: reduce) {
+      .floaty, .animate-pop, .dot, .robot-wiggle { animation: none; }
+    }
+  </style>
+</head>
+
+<body class="relative min-h-dvh overflow-hidden bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 font-game text-slate-800">
+
+  {# Плавающие декорации-эмодзи #}
+  <div class="floaty left-[6%] top-[8%]  text-4xl">⭐</div>
+  <div class="floaty right-[8%] top-[15%] text-5xl" style="animation-delay: 1s">🪐</div>
+  <div class="floaty left-[4%] top-[55%] text-3xl" style="animation-delay: 2s">🌟</div>
+  <div class="floaty right-[5%] top-[70%] text-4xl" style="animation-delay: 1.4s">☄️</div>
+  <div class="floaty bottom-[10%] left-[10%] text-3xl" style="animation-delay: 2.6s">✨</div>
+
+  {# csrf_token печатает скрытое поле и, главное, кладёт cookie csrftoken #}
+  {# — по нему JS отправит заголовок X-CSRFToken для POST. #}
+  {% csrf_token %}
+
+  <main class="relative z-10 mx-auto flex h-dvh max-w-2xl flex-col px-3 py-3">
+    <section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[2rem] border-4 border-white/80 bg-white/85 shadow-2xl backdrop-blur-md">
+
+      {# ------ Шапка с маскотом и прогрессом XP ------ #}
+      <header class="bg-gradient-to-r from-cyan-400 via-sky-500 to-blue-500 px-5 py-4 text-white">
+        <div class="flex items-center gap-4">
+          <div class="robot-wiggle flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-white/95 text-3xl shadow-lg">
+            🤖
+          </div>
+          <div class="min-w-0 flex-1">
+            <h1 class="text-xl font-extrabold leading-tight drop-shadow-sm sm:text-2xl">Робот-Учёный</h1>
+            <p class="text-sm font-semibold text-cyan-50">Твой учебный напарник · задавай любые вопросы!</p>
+          </div>
+          <div class="flex shrink-0 flex-col items-end gap-1">
+            <span id="xp-label" class="rounded-full bg-white/25 px-3 py-1 text-xs font-extrabold backdrop-blur">Уровень 1 · 0 XP</span>
+            <div class="h-3 w-24 overflow-hidden rounded-full bg-white/30">
+              <div id="xp-bar" class="h-full w-0 rounded-full bg-gradient-to-r from-amber-300 to-yellow-400 transition-all duration-700"></div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      {# ------ Лента сообщений ------ #}
+      <div id="messages" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-5">
+        <div class="animate-pop flex items-end gap-2">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-cyan-400 to-blue-500 text-xl shadow-md">🤖</div>
+          <div class="max-w-[75%] rounded-3xl rounded-bl-md border-2 border-amber-300 bg-white px-4 py-3 text-[15px] leading-snug text-slate-700 shadow-lg">
+            Привет! 👋 Я Робот-Учёный. Спрашивай про математику, науку, космос или динозавров — что хочешь! Каждый ответ даёт тебе <b>+25 XP</b> 🎮
+          </div>
+        </div>
+      </div>
+{# ------ Панель ввода ------ #}
+      <footer class="border-t-4 border-white/70 bg-sky-50 px-4 py-3">
+        <div class="mb-3 flex flex-wrap gap-2">
+          <button type="button" data-message="Придумай мне пример по математике!" class="quick-chip rounded-full border-2 border-sky-200 bg-white px-3 py-1.5 text-sm font-bold text-sky-700 shadow transition hover:-translate-y-0.5 hover:border-fuchsia-400 hover:text-fuchsia-600">
+            ➕ Реши пример
+          </button>
+          <button type="button" data-message="Почему вымерли динозавры?" class="quick-chip rounded-full border-2 border-sky-200 bg-white px-3 py-1.5 text-sm font-bold text-sky-700 shadow transition hover:-translate-y-0.5 hover:border-fuchsia-400 hover:text-fuchsia-600">
+            🦖 Динозавры
+          </button>
+          <button type="button" data-message="Почему небо голубое?" class="quick-chip rounded-full border-2 border-sky-200 bg-white px-3 py-1.5 text-sm font-bold text-sky-700 shadow transition hover:-translate-y-0.5 hover:border-fuchsia-400 hover:text-fuchsia-600">
+            🌈 Голубое небо
+          </button>
+          <button type="button" data-message="Расскажи про космос и планеты!" class="quick-chip rounded-full border-2 border-sky-200 bg-white px-3 py-1.5 text-sm font-bold text-sky-700 shadow transition hover:-translate-y-0.5 hover:border-fuchsia-400 hover:text-fuchsia-600">
+            🪐 Космос
+          </button>
+        </div>
+
+        <form id="chat-form" class="flex items-center gap-2">
+          <input
+            id="chat-input"
+            type="text"
+            maxlength="500"
+            autocomplete="off"
+            placeholder="Напиши сообщение Роботу-Учёному..."
+            class="min-w-0 flex-1 rounded-full border-2 border-sky-200 bg-white px-5 py-3 text-[15px] font-semibold shadow-inner outline-none transition placeholder:text-slate-400 focus:border-fuchsia-400 focus:ring-4 focus:ring-fuchsia-200"
+          >
+          <button
+            id="send-btn"
+            type="submit"
+            aria-label="Отправить сообщение"
+            class="flex h-12 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-amber-400 to-orange-500 text-2xl text-white shadow-lg transition hover:from-orange-400 hover:to-red-500 active:scale-90"
+          >➤</button>
+        </form>
+      </footer>
+
+    </section>
+  </main>
+<script>
+    // ------------------------------------------------------------------
+    // Клиент чата: единственный вызов API — POST /api/chat/send_demo/
+    //   body:  {"message": "текст"}
+    //   reply: {"reply": "ответ бота"}
+    // ------------------------------------------------------------------
+    const messages = document.getElementById('messages');
+    const form = document.getElementById('chat-form');
+    const input = document.getElementById('chat-input');
+    const sendBtn = document.getElementById('send-btn');
+    const xpBar = document.getElementById('xp-bar');
+    const xpLabel = document.getElementById('xp-label');
+
+    let waiting = false;
+    let xp = 0;
+
+    function getCookie(name) {
+      const match = document.cookie.match(new RegExp('(^|;\\s*)' + name + '=([^;]*)'));
+      return match ? decodeURIComponent(match[2]) : null;
+    }
+
+    function scrollDown() {
+      messages.scrollTop = messages.scrollHeight;
+    }
+
+    function addMessage(text, who) {
+      const wrap = document.createElement('div');
+      wrap.className = 'animate-pop flex items-end gap-2 ' + (who === 'user' ? 'justify-end' : 'justify-start');
+
+      if (who === 'bot') {
+        const avatar = document.createElement('div');
+        avatar.className = 'flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-cyan-400 to-blue-500 text-xl shadow-md';
+        avatar.textContent = '🤖';
+        wrap.appendChild(avatar);
+      }
+
+      const bubble = document.createElement('div');
+      if (who === 'user') {
+        bubble.className = 'max-w-[75%] rounded-3xl rounded-br-md bg-gradient-to-br from-fuchsia-500 to-violet-600 px-4 py-3 text-[15px] leading-snug text-white shadow-lg';
+      } else {
+        bubble.className = 'max-w-[75%] rounded-3xl rounded-bl-md border-2 border-amber-300 bg-white px-4 py-3 text-[15px] leading-snug text-slate-700 shadow-lg';
+      }
+      bubble.textContent = text;
+      wrap.appendChild(bubble);
+
+      messages.appendChild(wrap);
+      scrollDown();
+    }
+
+    function showTyping() {
+      const wrap = document.createElement('div');
+      wrap.id = 'typing-wrap';
+      wrap.className = 'flex items-end gap-2';
+      wrap.innerHTML = `
+        <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-white bg-gradient-to-br from-cyan-400 to-blue-500 text-xl shadow-md">🤖</div>
+        <div class="flex items-center gap-1.5 rounded-3xl rounded-bl-md border-2 border-amber-300 bg-white px-5 py-4 shadow-lg">
+          <span class="dot"></span><span class="dot dot-delay-1"></span><span class="dot dot-delay-2"></span>
+        </div>`;
+      messages.appendChild(wrap);
+      scrollDown();
+    }
+
+    function hideTyping() {
+      const wrap = document.getElementById('typing-wrap');
+      if (wrap) wrap.remove();
+    }
+
+    async function sendMessage(text) {
+      waiting = true;
+      sendBtn.disabled = true;
+      sendBtn.classList.add('opacity-60', 'cursor-not-allowed');
+      showTyping();
+
+      try {
+        const res = await fetch('/api/chat/send_demo/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': getCookie('csrftoken'),
+          },
+          body: JSON.stringify({ message: text }),
+        });
+        const data = await res.json();
+        hideTyping();
+
+        if (res.ok && data.reply) {
+          addMessage(data.reply, 'bot');
+          gainXp();
+          spawnConfetti();
+        } else {
+          addMessage('Ой! Робот что-то потерял в своей памяти 😅 Попробуй ещё раз!', 'bot');
+        }
+      } catch (err) {
+        hideTyping();
+        addMessage('Кажется, связь с Роботом пропала 📡 Попробуй ещё раз!', 'bot');
+      } finally {
+        waiting = false;
+        sendBtn.disabled = false;
+        sendBtn.classList.remove('opacity-60', 'cursor-not-allowed');
+        input.focus();
+      }
+    }
+
+    function gainXp() {
+      xp += 25;
+      const level = Math.floor(xp / 100) + 1;
+      xpLabel.textContent = 'Уровень ' + level + ' · ' + xp + ' XP';
+      xpBar.style.width = (xp % 100) + '%';
+    }
+
+    function spawnConfetti() {
+      const colors = ['#f43f5e', '#f97316', '#facc15', '#4ade80', '#38bdf8', '#a78bfa', '#f472b6'];
+      for (let i = 0; i < 22; i++) {
+        const piece = document.createElement('div');
+        const size = 6 + Math.random() * 8;
+        piece.style.cssText = 'position:fixed;top:-14px;left:' + (Math.random() * 100) + 'vw;width:' + size + 'px;height:' + (size * 0.6) + 'px;background:' + colors[i % colors.length] + ';border-radius:3px;z-index:9999;animation:confetti-fall ' + (1 + Math.random() * 1.4) + 's linear forwards;animation-delay:' + (Math.random() * 0.3) + 's;';
+        document.body.appendChild(piece);
+        setTimeout(() => piece.remove(), 3000);
+      }
+    }
+
+    form.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const text = input.value.trim();
+      if (!text || waiting) return;
+      addMessage(text, 'user');
+      input.value = '';
+      sendMessage(text);
+    });
+
+    document.querySelectorAll('.quick-chip').forEach((btn) => {
+      btn.addEventListener('click', () => {
+        if (waiting) return;
+        const text = btn.dataset.message;
+        addMessage(text, 'user');
+        sendMessage(text);
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  {% include 'chat/_head.html' %}
+  <meta name="description" content="Бортовой компьютер космического корабля — учебный чат-бот для школьников">
+  <title>🛸 Бортовой компьютер — корабль «Звезда-12»</title>
+  {% include 'chat/_styles.html' %}
+</head>
+<body class="relative min-h-dvh overflow-hidden bg-gradient-to-b from-[#070b21] via-[#0d1433] to-[#16214d] font-game text-slate-100"
+      data-mascot="🖥️"
+      data-xp-name="единиц энергии"
+      data-level-name="Система"
+      data-bot-bubble="max-w-[75%] rounded-3xl rounded-bl-md border-2 border-cyan-400/50 bg-slate-800 px-4 py-3 text-[15px] leading-snug text-cyan-100 shadow-lg"
+      data-typing="border-2 border-cyan-400/50 bg-slate-800 text-cyan-100 shadow-lg"
+      data-confetti="#22d3ee,#38bdf8,#60a5fa,#34d399,#fbbf24">
+
+  {% csrf_token %}
+
+  <div class="floaty left-[6%] top-[10%] text-4xl">🚀</div>
+  <div class="floaty right-[7%] top-[14%] text-5xl" style="animation-delay:1s">🪐</div>
+  <div class="floaty left-[5%] top-[58%] text-3xl" style="animation-delay:2s">⭐</div>
+  <div class="floaty right-[6%] top-[72%] text-4xl" style="animation-delay:1.4s">🛰️</div>
+  <div class="floaty bottom-[8%] left-[12%] text-3xl" style="animation-delay:2.6s">☄️</div>
+
+  <main class="relative z-10 mx-auto flex h-dvh max-w-2xl flex-col px-3 py-3">
+    <section class="flex min-h-0 flex-1 flex-col overflow-hidden rounded-[2rem] border-2 border-cyan-400/40 bg-slate-800/90 shadow-2xl">
+
+      <header class="border-b-2 border-cyan-400/40 bg-gradient-to-r from-slate-950 to-slate-900 px-5 py-4 text-white">
+        <div class="flex items-center gap-4">
+          <div class="avatar-pulse flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl border-2 border-cyan-400/60 bg-slate-800 text-3xl shadow-lg">🖥️</div>
+          <div class="min-w-0 flex-1">
+            <h1 class="font-mono text-xl font-extrabold tracking-widest drop-shadow sm:text-2xl">ЗВЕЗДА-12</h1>
+            <p class="font-mono text-sm text-cyan-300">БОРТОВОЙ КОМПЬЮТЕР · СТАТУС: ОНЛАЙН ▮</p>
+          </div>
+          <div class="flex shrink-0 flex-col items-end gap-1">
+            <span id="xp-label" class="rounded-full bg-cyan-400/20 px-3 py-1 font-mono text-xs font-extrabold">Система 1 · 0 энергии</span>
+            <div class="h-3 w-24 overflow-hidden rounded-full bg-white/20">
+              <div id="xp-bar" class="h-full w-0 rounded-full bg-gradient-to-r from-cyan-400 to-sky-500 transition-all duration-700"></div>
+            </div>
+          </div>
+        </div>
+      </header>
+
+      <div id="messages" class="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 py-5">
+        <div class="animate-pop flex items-end gap-2">
+          <div class="flex h-10 w-10 shrink-0 items-center justify-center rounded-full border-2 border-cyan-400/60 bg-slate-800 text-xl shadow-md">🖥️</div>
+          <div class="max-w-[75%] rounded-3xl rounded-bl-md border-2 border-cyan-400/50 bg-slate-800 px-4 py-3 text-[15px] leading-snug text-cyan-100 shadow-lg">
+            Капитан, борт на связи! 🛸 Мы готовы к полёту. Отдай приказ: <b>запустить двигатели</b>, <b>исследовать планету</b> или <b>проверить топливо</b>. Выполнение заданий повышает энергию экипажа!
+          </div>
+        </div>
+      </div>
+
+      <footer class="border-t-2 border-cyan-400/40 bg-slate-900 px-4 py-3">
+        <div class="mb-3 flex flex-wrap gap-2">
+          <button type="button" data-message="Запусти двигатели!" class="quick-chip rounded-full border-2 border-cyan-400/40 bg-slate-800 px-3 py-1.5 text-sm font-bold text-cyan-200 shadow transition hover:-translate-y-0.5 hover:border-cyan-300">🚀 Запустить двигатели</button>
+          <button type="button" data-message="Исследуй планету!" class="quick-chip rounded-full border-2 border-cyan-400/40 bg-slate-800 px-3 py-1.5 text-sm font-bold text-cyan-200 shadow transition hover:-translate-y-0.5 hover:border-cyan-300">🪐 Исследовать планету</button>
+          <button type="button" data-message="Проверь запас топлива" class="quick-chip rounded-full border-2 border-cyan-400/40 bg-slate-800 px-3 py-1.5 text-sm font-bold text-cyan-200 shadow transition hover:-translate-y-0.5 hover:border-cyan-300">⛽ Проверить топливо</button>
+          <button type="button" data-message="Сгенерируй случайное событие!" class="quick-chip rounded-full border-2 border-cyan-400/40 bg-slate-800 px-3 py-1.5 text-sm font-bold text-cyan-200 shadow transition hover:-translate-y-0.5 hover:border-cyan-300">📡 Случайное событие</button>
+        </div>
+        <form id="chat-form" class="flex items-center gap-2">
+          <input id="chat-input" type="text" maxlength="500" autocomplete="off" placeholder="Отдай приказ капитана..." class="min-w-0 flex-1 rounded-full border-2 border-cyan-400/50 bg-slate-800 px-5 py-3 text-[15px] font-semibold text-cyan-100 shadow-inner outline-none transition placeholder:text-cyan-500/60 focus:border-cyan-300 focus:ring-4 focus:ring-cyan-400/20">
+          <button id="send-btn" type="submit" aria-label="Отправить приказ" class="flex h-12 w-14 shrink-0 items-center justify-center rounded-full bg-gradient-to-r from-cyan-500 to-sky-600 text-2xl text-white shadow-lg transition hover:from-sky-400 hover:to-blue-500 active:scale-90">➤</button>
+        </form>
+      </footer>
+
+    </section>
+  </main>
+
+  {% include 'chat/_chat_client.html' %}
+</body>
+</html>
