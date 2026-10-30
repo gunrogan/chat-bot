@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import random
+from random import choice
 
 from django.http import JsonResponse
 from django.shortcuts import render
@@ -110,18 +111,42 @@ def build_reply_demo(message: str) -> str:
 def build_reply_magic(message: str) -> str:
     # TODO(магический помощник): волшебник в академии магии — задания,
     # загадки, проверка ответов, очки опыта и уровни.
+    text = message.strip().lower()
+    greetings = ('привет', 'здравствуй', 'добрый день', 'hello', 'hi', 'салют')
+    greetings_bot = ['Приветствую тебя в нашей академии магии и колдовства',
+                     "Приветсвую тебя, молодой маг",
+                     "Готов к изучению магии? Ну что же, начнём!"
+                     ]
+    if any(word in text for word in greetings):
+        return random.choice(greetings_bot)
+    # Принт для дебага
+    print(text)
     return 'ПРИВЕТ'
 
 
 def build_reply_ship(message: str) -> str:
     # TODO(бортовой компьютер): состояние корабля, двигатели, топливо,
     # исследование планет, случайные события, аварии.
+    text = message.strip().lower()
+    greetings = ('привет', 'здравствуй', 'добрый день', 'hello', 'hi', 'салют')
+    greetings_bot = ['Здравствуйте сэр', 'Добрый вечер капитан' , 'Здравствуйте']
+    if any(word in text for word in greetings):
+        return random.choice(greetings_bot)
+    # Принт для дебага
+    print(text)
     return 'ПРИВЕТ'
-
 
 def build_reply_detective(message: str) -> str:
     # TODO(детективный бот): описание дела, улики, допрос свидетелей,
     # проверка версий пользователя, результат расследования.
+
+    text = message.strip().lower()
+    greetings = ('привет', 'здравствуй', 'добрый день', 'hello', 'hi', 'салют')
+    greetings_bot = ['ну где там наш детектив? Вот он!', 'салют детектив']
+    if any(word in text for word in greetings):
+        return random.choice(greetings_bot)
+    # Принт для дебага
+    print(text)
     return 'ПРИВЕТ'
 
 
@@ -132,14 +157,28 @@ def build_reply_trader(message: str) -> str:
 
 
 def build_reply_survival(message: str) -> str:
-    # TODO(бот выживания): запасы еды и воды, исследование острова,
-    # случайные события, постройка убежища, проверка «выживет ли игрок».
+    text = message.strip().lower()
+
+    greetings = ('привет', 'здравствуй', 'добрый день', 'hello', 'hi', 'салют')
+    greetings_bot = [" добро пожаловать на курсы по выживанию","здравствуй новичок это курсы по выживанию"]
+    if any(word in text for word in greetings):
+        return random.choice(greetings_bot)
+    # Принт для дебага
+    print(text)
     return 'ПРИВЕТ'
 
 
 def build_reply_dungeon(message: str) -> str:
     # TODO(хранитель подземелья): генерация комнат и событий, сражение/
     # исследование/отдых, здоровье и инвентарь, награды, память приключения.
+
+    text = message.strip().lower()
+    greetings = ('привет', 'здравствуй', 'добрый день', 'hello', 'hi', 'салют')
+    greetings_bot = ['привет', 'здравствуй', 'здравия желаю', 'приветствую', 'здравствуйте']
+    if any(word in text for word in greetings):
+        return choice(greetings_bot)
+    # Принт для дебага
+    print(text)
     return 'ПРИВЕТ'
 
 
